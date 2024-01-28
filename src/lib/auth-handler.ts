@@ -1,5 +1,7 @@
 import { deleteCookie, getCookie, setCookie } from "cookies-next";
 import { jwtExpiryDate } from "./jwt";
+import type { NextRequest, NextResponse } from "next/server";
+import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
 
 export type TUser = {
   _id: string;
@@ -29,23 +31,39 @@ type TAuthHandler = {
   getSession(): Promise<TSessionResponse>;
 };
 
+type CookieOptions = {
+  cookies?: () => ReadonlyRequestCookies;
+  req?: NextRequest;
+  res?: NextResponse;
+};
+
 type AuthHandlerOptions = {
   isSingleton?: boolean;
+  cookieOptions?: CookieOptions;
 };
 
 export default class AuthHandler implements TAuthHandler {
   private static instance: AuthHandler | null = null;
+  private cookieOptions: CookieOptions = {};
 
-  constructor(options?: AuthHandlerOptions) {
+  private constructor(options?: AuthHandlerOptions) {
+    if (options && options.cookieOptions) {
+      this.cookieOptions = options.cookieOptions;
+    }
+  }
+
+  public static create(options?: AuthHandlerOptions): AuthHandler {
     if (options && options.isSingleton === true) {
-      if (!!AuthHandler.instance) {
+      if (AuthHandler.instance instanceof AuthHandler) {
         return AuthHandler.instance;
       }
 
-      AuthHandler.instance = this;
+      AuthHandler.instance = new AuthHandler(options);
 
-      return this;
+      return AuthHandler.instance;
     }
+
+    return new AuthHandler(options);
   }
 
   async signUp(
@@ -80,6 +98,9 @@ export default class AuthHandler implements TAuthHandler {
         setCookie("auth-token", access_token, {
           expires: expiryDate(),
           secure: true,
+          req: this.cookieOptions.req,
+          res: this.cookieOptions.res,
+          cookies: this.cookieOptions.cookies,
         });
 
         return { error: null };
@@ -124,6 +145,9 @@ export default class AuthHandler implements TAuthHandler {
         setCookie("auth-token", access_token, {
           expires: expiryDate(),
           secure: true,
+          req: this.cookieOptions.req,
+          res: this.cookieOptions.res,
+          cookies: this.cookieOptions.cookies,
         });
 
         return { error: null };
@@ -139,14 +163,22 @@ export default class AuthHandler implements TAuthHandler {
 
   async signOut(): Promise<{ error: string | null }> {
     try {
-      deleteCookie("auth-token");
+      deleteCookie("auth-token", {
+        req: this.cookieOptions.req,
+        res: this.cookieOptions.res,
+        cookies: this.cookieOptions.cookies,
+      });
       return { error: null };
     } catch (error) {}
     return { error: "error logging out" };
   }
 
   async getSession(): Promise<TSessionResponse> {
-    const token = getCookie("auth-token");
+    const token = getCookie("auth-token", {
+      req: this.cookieOptions.req,
+      res: this.cookieOptions.res,
+      cookies: this.cookieOptions.cookies,
+    });
 
     if (token) {
       const isValid = jwtExpiryDate(token) > new Date();
