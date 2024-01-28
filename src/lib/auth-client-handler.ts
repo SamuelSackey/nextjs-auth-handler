@@ -4,13 +4,8 @@ import { jwtExpiryDate } from "./jwt";
 type TUser = { name: string };
 
 type TAuthClientHandler = {
-  signUp(
-    username: string,
-    email: string,
-    password: string,
-    redirectTo?: string
-  ): void;
-  signIn(email: string, password: string, redirectTo?: string): void;
+  signUp(username: string, email: string, password: string): void;
+  signIn(email: string, password: string): void;
   signOut(): void;
   getSession(): Promise<{
     session: {
@@ -36,35 +31,57 @@ export default class AuthClientHandler implements TAuthClientHandler {
   async signUp(
     username: string,
     email: string,
-    password: string,
-    redirectTo?: string | undefined
+    password: string
   ): Promise<{ error: string | null }> {
-    const res = await fetch("http://localhost:8080/user_api/api/v1/register", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ username, email, password }),
-    });
+    // Convert credentials to json
+    const body = JSON.stringify({ username, email, password });
 
-    if (res.ok) {
-      const data: { token: string } = await res.json();
-      setCookie("auth-token", data?.token);
-      return { error: null };
+    try {
+      const res = await fetch(
+        "http://localhost:8080/user_api/api/v1/register",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: body,
+        }
+      );
+
+      if (res.ok) {
+        const { access_token }: { access_token: string } = await res.json();
+
+        const expiryDate = () => {
+          const date = jwtExpiryDate(access_token);
+          date.setMinutes(date.getMinutes() - 15);
+          return date;
+        };
+
+        setCookie("auth-token", access_token, {
+          expires: expiryDate(),
+          secure: true,
+        });
+
+        return { error: null };
+      }
+
+      const error = await res.json();
+
+      throw new Error(error.detail);
+    } catch (error) {
+      return { error: (error as Error).message };
     }
-
-    return { error: "Error signing up" };
   }
 
   async signIn(
     email: string,
-    password: string,
-    redirectTo?: string | undefined
+    password: string
   ): Promise<{ error: string | null }> {
+    // Convert credentials to url encoded string
     const data = new URLSearchParams();
     data.append("username", email);
     data.append("password", password);
-    alert(data.toString());
+    const body = data.toString();
 
     try {
       const res = await fetch("http://localhost:8080/user_api/api/v1/login", {
@@ -72,7 +89,7 @@ export default class AuthClientHandler implements TAuthClientHandler {
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
-        body: data.toString(),
+        body: body,
       });
 
       if (res.ok) {
@@ -88,6 +105,7 @@ export default class AuthClientHandler implements TAuthClientHandler {
           expires: expiryDate(),
           secure: true,
         });
+
         return { error: null };
       }
 
