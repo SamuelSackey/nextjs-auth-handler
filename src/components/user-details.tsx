@@ -31,7 +31,23 @@ export default function UserDetails() {
 
       <div className="h-3" />
 
-      <button onClick={() => auth.signOut()}>Logout</button>
+      <button
+        onClick={() => {
+          const error = auth.signOut();
+
+          /**
+           * use if data is fetched in server component
+           */
+          // router.refresh();
+
+          /**
+           * use if data is fetched in client component
+           */
+          location.reload();
+        }}
+      >
+        Logout
+      </button>
     </>
   );
 }

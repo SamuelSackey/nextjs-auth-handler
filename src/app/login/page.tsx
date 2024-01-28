@@ -1,8 +1,12 @@
 "use client";
+
 import { createClientAuth } from "@/lib/client-auth";
+import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
 export default function LoginPAge() {
+  const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -17,7 +21,7 @@ export default function LoginPAge() {
     if (error) {
       setError(error);
     } else {
-      setError("");
+      router.refresh();
     }
   };
 
