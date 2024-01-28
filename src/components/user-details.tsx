@@ -12,15 +12,6 @@ export default function UserDetails() {
   const { session, error } = useSession();
   const user = session?.user;
 
-  //   const user: TUser = {
-  //     _id: "65b6214f1ef58a048010af10",
-  //     username: "Leonard",
-  //     email: "leo@gmail.com",
-  //     role: "user",
-  //     created_at: "2024-01-28 09:29:43",
-  //     projects: [],
-  //   };
-
   return (
     <>
       {error ? (

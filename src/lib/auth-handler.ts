@@ -35,6 +35,7 @@ type CookieOptions = {
   cookies?: () => ReadonlyRequestCookies;
   req?: NextRequest;
   res?: NextResponse;
+  serverComponent?: boolean;
 };
 
 type AuthHandlerOptions = {
@@ -95,13 +96,15 @@ export default class AuthHandler implements TAuthHandler {
           return date;
         };
 
-        setCookie("auth-token", access_token, {
-          expires: expiryDate(),
-          secure: true,
-          req: this.cookieOptions.req,
-          res: this.cookieOptions.res,
-          cookies: this.cookieOptions.cookies,
-        });
+        if (this.cookieOptions.serverComponent !== true) {
+          setCookie("auth-token", access_token, {
+            expires: expiryDate(),
+            secure: true,
+            req: this.cookieOptions.req,
+            res: this.cookieOptions.res,
+            cookies: this.cookieOptions.cookies,
+          });
+        }
 
         return { error: null };
       }
@@ -142,13 +145,15 @@ export default class AuthHandler implements TAuthHandler {
           return date;
         };
 
-        setCookie("auth-token", access_token, {
-          expires: expiryDate(),
-          secure: true,
-          req: this.cookieOptions.req,
-          res: this.cookieOptions.res,
-          cookies: this.cookieOptions.cookies,
-        });
+        if (this.cookieOptions.serverComponent !== true) {
+          setCookie("auth-token", access_token, {
+            expires: expiryDate(),
+            secure: true,
+            req: this.cookieOptions.req,
+            res: this.cookieOptions.res,
+            cookies: this.cookieOptions.cookies,
+          });
+        }
 
         return { error: null };
       }
@@ -163,14 +168,17 @@ export default class AuthHandler implements TAuthHandler {
 
   async signOut(): Promise<{ error: string | null }> {
     try {
-      deleteCookie("auth-token", {
-        req: this.cookieOptions.req,
-        res: this.cookieOptions.res,
-        cookies: this.cookieOptions.cookies,
-      });
+      if (this.cookieOptions.serverComponent !== true) {
+        deleteCookie("auth-token", {
+          req: this.cookieOptions.req,
+          res: this.cookieOptions.res,
+          cookies: this.cookieOptions.cookies,
+        });
+      }
       return { error: null };
-    } catch (error) {}
-    return { error: "error logging out" };
+    } catch (error) {
+      return { error: `Error logging out: ${(error as Error).message}` };
+    }
   }
 
   async getSession(): Promise<TSessionResponse> {
