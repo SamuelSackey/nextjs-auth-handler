@@ -37,7 +37,9 @@ export default function UserDetails() {
       <br />
 
       <button onClick={() => router.back()}>Go Back</button>
-      <div className="h-6 inline" />
+
+      <div className="h-3" />
+
       <button onClick={() => auth.signOut()}>Logout</button>
     </>
   );

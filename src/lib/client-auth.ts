@@ -1,7 +1,7 @@
 "use client";
 
-import AuthClientHandler from "./auth-client-handler";
+import AuthHandler from "./auth-handler";
 
 export function createClientAuth() {
-  return AuthClientHandler.create();
+  return new AuthHandler({ isSingleton: true });
 }

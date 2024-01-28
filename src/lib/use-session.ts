@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Session } from "./auth-client-handler";
+import { Session } from "./auth-handler";
 import { createClientAuth } from "./client-auth";
 
 export default function useSession() {

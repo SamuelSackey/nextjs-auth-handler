@@ -22,23 +22,30 @@ type TSessionResponse = {
   error: string | null;
 };
 
-type TAuthClientHandler = {
+type TAuthHandler = {
   signUp(username: string, email: string, password: string): void;
   signIn(email: string, password: string): void;
   signOut(): void;
   getSession(): Promise<TSessionResponse>;
 };
 
-export default class AuthClientHandler implements TAuthClientHandler {
-  private static instance: AuthClientHandler | null = null;
+type AuthHandlerOptions = {
+  isSingleton?: boolean;
+};
 
-  constructor() {}
+export default class AuthHandler implements TAuthHandler {
+  private static instance: AuthHandler | null = null;
 
-  static create(): AuthClientHandler {
-    if (!AuthClientHandler.instance) {
-      AuthClientHandler.instance = new AuthClientHandler();
+  constructor(options?: AuthHandlerOptions) {
+    if (options && options.isSingleton === true) {
+      if (!!AuthHandler.instance) {
+        return AuthHandler.instance;
+      }
+
+      AuthHandler.instance = this;
+
+      return this;
     }
-    return AuthClientHandler.instance;
   }
 
   async signUp(
