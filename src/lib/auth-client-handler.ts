@@ -131,18 +131,10 @@ export default class AuthClientHandler implements TAuthClientHandler {
   }
 
   async signOut(): Promise<{ error: string | null }> {
-    const res = await fetch("http://localhost:8080/user_api/api/v1/logout", {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (res.ok) {
+    try {
       deleteCookie("auth-token");
       return { error: null };
-    }
-
+    } catch (error) {}
     return { error: "error logging out" };
   }
 
@@ -184,6 +176,7 @@ export default class AuthClientHandler implements TAuthClientHandler {
       }
 
       // token expired
+      this.signOut();
       return { data: { session: null }, error: "token expired" };
     }
 

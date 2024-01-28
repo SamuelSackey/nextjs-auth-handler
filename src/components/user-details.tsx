@@ -1,9 +1,12 @@
 "use client";
 
+import { createClientAuth } from "@/lib/client-auth";
 import useSession from "@/lib/use-session";
 import { useRouter } from "next/navigation";
 
 export default function UserDetails() {
+  const auth = createClientAuth();
+
   const router = useRouter();
 
   const { session, error } = useSession();
@@ -34,6 +37,8 @@ export default function UserDetails() {
       <br />
 
       <button onClick={() => router.back()}>Go Back</button>
+      <div className="h-6 inline" />
+      <button onClick={() => auth.signOut()}>Logout</button>
     </>
   );
 }
