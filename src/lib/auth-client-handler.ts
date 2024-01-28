@@ -1,19 +1,32 @@
 import { deleteCookie, getCookie, setCookie } from "cookies-next";
 import { jwtExpiryDate } from "./jwt";
 
-type TUser = { name: string };
+export type TUser = {
+  _id: string;
+  username: string;
+  email: string;
+  role: string;
+  created_at: string;
+  projects: [];
+};
+
+export type Session = {
+  user: TUser;
+  token: string;
+};
+
+type TSessionResponse = {
+  data: {
+    session: Session | null;
+  };
+  error: string | null;
+};
 
 type TAuthClientHandler = {
   signUp(username: string, email: string, password: string): void;
   signIn(email: string, password: string): void;
   signOut(): void;
-  getSession(): Promise<{
-    session: {
-      user: TUser;
-      token: string;
-    } | null;
-    error: string | null;
-  }>;
+  getSession(): Promise<TSessionResponse>;
 };
 
 export default class AuthClientHandler implements TAuthClientHandler {
@@ -133,37 +146,48 @@ export default class AuthClientHandler implements TAuthClientHandler {
     return { error: "error logging out" };
   }
 
-  async getSession(): Promise<{
-    session: { user: TUser; token: string } | null;
-    error: string | null;
-  }> {
+  async getSession(): Promise<TSessionResponse> {
     const token = getCookie("auth-token");
 
     if (token) {
-      const isValid = jwtExpiryDate(token) < new Date();
+      const isValid = jwtExpiryDate(token) > new Date();
 
       if (isValid) {
-        const res = await fetch("/api/details", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        try {
+          const res = await fetch(
+            "http://localhost:8080/user_api/api/v1/details",
+            {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
 
-        if (res.ok) {
-          return { session: { user: await res.json(), token }, error: null };
+          if (res.ok) {
+            const user = await res.json();
+
+            return {
+              data: { session: { user, token } },
+              error: null,
+            };
+          }
+
+          const error = await res.json();
+
+          throw new Error(error.detail);
+        } catch (error) {
+          // user response error
+          return { data: { session: null }, error: (error as Error).message };
         }
-
-        // user response error
-        return { session: null, error: "user could not be found" };
       }
 
       // token expired
-      return { session: null, error: "token expired" };
+      return { data: { session: null }, error: "token expired" };
     }
 
     // not logged in
-    return { session: null, error: "user not logged in" };
+    return { data: { session: null }, error: "user not logged in" };
   }
 }
