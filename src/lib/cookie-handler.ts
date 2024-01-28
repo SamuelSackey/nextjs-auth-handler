@@ -1,23 +1,27 @@
-type CookieMethods = {
-  get?: (key: string) => void;
-  set?: (key: string, value: string, options: string) => Promise<void> | void;
-  remove?: (key: string, options: string) => Promise<void> | void;
-};
+/**
+ * Example file for implementing higher-order function
+ */
 
-class CookieStore {
-  private cookieMethods: CookieMethods | undefined;
+// type CookieMethods = {
+//   get?: (key: string) => void;
+//   set?: (key: string, value: string, options: string) => Promise<void> | void;
+//   remove?: (key: string, options: string) => Promise<void> | void;
+// };
 
-  constructor(cookieMethods: CookieMethods) {
-    this.cookieMethods = cookieMethods;
-  }
+// class CookieStore {
+//   private cookieMethods: CookieMethods | undefined;
 
-  login() {
-    if (this.cookieMethods?.get) this.cookieMethods?.get("test");
-  }
-}
+//   constructor(cookieMethods: CookieMethods) {
+//     this.cookieMethods = cookieMethods;
+//   }
 
-const Test = new CookieStore({
-  get(key: string) {
-    return "hello";
-  },
-});
+//   login() {
+//     if (this.cookieMethods?.get) this.cookieMethods?.get("test");
+//   }
+// }
+
+// const Test = new CookieStore({
+//   get(key: string) {
+//     return "hello";
+//   },
+// });
