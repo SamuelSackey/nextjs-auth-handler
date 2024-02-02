@@ -7,7 +7,8 @@ import { FormEvent, useState } from "react";
 export default function SignUpPage() {
   const router = useRouter();
 
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -19,11 +20,17 @@ export default function SignUpPage() {
 
     // setError(`Invalid Credentials for ${email} | ${password}`);
 
-    const { error } = await auth.signUp(name, email, password);
+    const { error } = await auth.signUp({
+      first_name: firstName,
+      last_name: lastName,
+      email,
+      password,
+    });
 
     if (error) {
       setError(error);
     } else {
+      setError("");
       router.refresh();
     }
   };
@@ -34,17 +41,26 @@ export default function SignUpPage() {
 
       <form onSubmit={onSubmit}>
         <input
-          type="name"
-          name="name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
+          type="first_name"
+          placeholder="first_name"
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+        />
+
+        <div className="h-4" />
+
+        <input
+          type="last_name"
+          placeholder="last_name"
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
         />
 
         <div className="h-4" />
 
         <input
           type="email"
-          name="email"
+          placeholder="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
@@ -53,7 +69,7 @@ export default function SignUpPage() {
 
         <input
           type="password"
-          name="password"
+          placeholder="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />

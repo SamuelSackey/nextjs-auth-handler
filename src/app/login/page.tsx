@@ -16,7 +16,7 @@ export default function LoginPAge() {
 
     e.preventDefault();
 
-    const { error } = await auth.signIn(email, password);
+    const { error } = await auth.signIn({ email, password });
 
     if (error) {
       setError(error);

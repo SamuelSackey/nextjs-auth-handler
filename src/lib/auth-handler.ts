@@ -5,11 +5,11 @@ import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension
 
 export type TUser = {
   _id: string;
-  username: string;
+  first_name: string;
+  last_name: string;
   email: string;
   role: string;
-  created_at: string;
-  projects: [];
+  verified: boolean;
 };
 
 export type Session = {
@@ -25,8 +25,20 @@ type TSessionResponse = {
 };
 
 type TAuthHandler = {
-  signUp(username: string, email: string, password: string): void;
-  signIn(email: string, password: string): void;
+  signUp({
+    first_name,
+    last_name,
+    role,
+    email,
+    password,
+  }: {
+    first_name: string;
+    last_name: string;
+    role: string;
+    email: string;
+    password: string;
+  }): void;
+  signIn({ email, password }: { email: string; password: string }): void;
   signOut(): void;
   getSession(): Promise<TSessionResponse>;
 };
@@ -67,47 +79,40 @@ export default class AuthHandler implements TAuthHandler {
     return new AuthHandler(options);
   }
 
-  async signUp(
-    username: string,
-    email: string,
-    password: string
-  ): Promise<{ error: string | null }> {
+  async signUp({
+    first_name,
+    last_name,
+    email,
+    password,
+    role = "HR_MANAGER",
+  }: {
+    first_name: string;
+    last_name: string;
+
+    email: string;
+    password: string;
+    role?: string;
+  }): Promise<{ error: string | null }> {
     // Convert credentials to json
-    const body = JSON.stringify({ username, email, password });
+    const body = JSON.stringify({
+      first_name,
+      last_name,
+      role,
+      email,
+      password,
+    });
 
     try {
-      const res = await fetch(
-        "http://localhost:8080/user_api/api/v1/register",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: body,
-        }
-      );
+      const res = await fetch("http://localhost:8000/api/v1/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          accept: "application/json",
+        },
+        body: body,
+      });
 
-      if (res.ok) {
-        const { access_token }: { access_token: string } = await res.json();
-
-        const expiryDate = () => {
-          const date = jwtExpiryDate(access_token);
-          date.setMinutes(date.getMinutes() - 15);
-          return date;
-        };
-
-        if (this.cookieOptions.serverComponent !== true) {
-          setCookie("auth-token", access_token, {
-            expires: expiryDate(),
-            secure: true,
-            req: this.cookieOptions.req,
-            res: this.cookieOptions.res,
-            cookies: this.cookieOptions.cookies,
-          });
-        }
-
-        return { error: null };
-      }
+      if (res.ok) return { error: null };
 
       const error = await res.json();
 
@@ -117,10 +122,13 @@ export default class AuthHandler implements TAuthHandler {
     }
   }
 
-  async signIn(
-    email: string,
-    password: string
-  ): Promise<{ error: string | null }> {
+  async signIn({
+    email,
+    password,
+  }: {
+    email: string;
+    password: string;
+  }): Promise<{ error: string | null }> {
     // Convert credentials to url encoded string
     const data = new URLSearchParams();
     data.append("username", email);
@@ -128,7 +136,7 @@ export default class AuthHandler implements TAuthHandler {
     const body = data.toString();
 
     try {
-      const res = await fetch("http://localhost:8080/user_api/api/v1/login", {
+      const res = await fetch("http://localhost:8000/api/v1/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
@@ -139,23 +147,28 @@ export default class AuthHandler implements TAuthHandler {
       if (res.ok) {
         const { access_token }: { access_token: string } = await res.json();
 
-        const expiryDate = () => {
-          const date = jwtExpiryDate(access_token);
-          date.setMinutes(date.getMinutes() - 15);
-          return date;
-        };
+        const isVerified = (await this.getSession(access_token))?.data?.session
+          ?.user?.verified;
 
-        if (this.cookieOptions.serverComponent !== true) {
-          setCookie("auth-token", access_token, {
-            expires: expiryDate(),
-            secure: true,
-            req: this.cookieOptions.req,
-            res: this.cookieOptions.res,
-            cookies: this.cookieOptions.cookies,
-          });
-        }
+        if (isVerified) {
+          const expiryDate = () => {
+            const date = jwtExpiryDate(access_token);
+            date.setMinutes(date.getMinutes() - 15);
+            return date;
+          };
 
-        return { error: null };
+          if (this.cookieOptions.serverComponent !== true) {
+            setCookie("auth-token", access_token, {
+              expires: expiryDate(),
+              secure: true,
+              req: this.cookieOptions.req,
+              res: this.cookieOptions.res,
+              cookies: this.cookieOptions.cookies,
+            });
+          }
+
+          return { error: null };
+        } else throw new Error("Account is not verified");
       }
 
       const error = await res.json();
@@ -181,28 +194,27 @@ export default class AuthHandler implements TAuthHandler {
     }
   }
 
-  async getSession(): Promise<TSessionResponse> {
-    const token = getCookie("auth-token", {
-      req: this.cookieOptions.req,
-      res: this.cookieOptions.res,
-      cookies: this.cookieOptions.cookies,
-    });
+  async getSession(tokenString?: string): Promise<TSessionResponse> {
+    const token =
+      tokenString ||
+      getCookie("auth-token", {
+        req: this.cookieOptions.req,
+        res: this.cookieOptions.res,
+        cookies: this.cookieOptions.cookies,
+      });
 
     if (token) {
       const isValid = jwtExpiryDate(token) > new Date();
 
       if (isValid) {
         try {
-          const res = await fetch(
-            "http://localhost:8080/user_api/api/v1/details",
-            {
-              method: "GET",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          );
+          const res = await fetch("http://localhost:8000/api/v1/users/me", {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          });
 
           if (res.ok) {
             const user = await res.json();
