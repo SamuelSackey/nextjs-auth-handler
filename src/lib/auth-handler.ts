@@ -3,6 +3,8 @@ import { jwtExpiryDate } from "./jwt";
 import type { NextRequest, NextResponse } from "next/server";
 import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
 
+const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+
 export type TUser = {
   _id: string;
   first_name: string;
@@ -24,25 +26,6 @@ type TSessionResponse = {
   error: string | null;
 };
 
-type TAuthHandler = {
-  signUp({
-    first_name,
-    last_name,
-    role,
-    email,
-    password,
-  }: {
-    first_name: string;
-    last_name: string;
-    role: string;
-    email: string;
-    password: string;
-  }): void;
-  signIn({ email, password }: { email: string; password: string }): void;
-  signOut(): void;
-  getSession(): Promise<TSessionResponse>;
-};
-
 type CookieOptions = {
   cookies?: () => ReadonlyRequestCookies;
   req?: NextRequest;
@@ -55,7 +38,7 @@ type AuthHandlerOptions = {
   cookieOptions?: CookieOptions;
 };
 
-export default class AuthHandler implements TAuthHandler {
+export default class AuthHandler {
   private static instance: AuthHandler | null = null;
   private cookieOptions: CookieOptions = {};
 
@@ -103,11 +86,10 @@ export default class AuthHandler implements TAuthHandler {
     });
 
     try {
-      const res = await fetch("http://localhost:8000/api/v1/register", {
+      const res = await fetch(`${backendUrl}/api/v1/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          accept: "application/json",
         },
         body: body,
       });
@@ -136,7 +118,7 @@ export default class AuthHandler implements TAuthHandler {
     const body = data.toString();
 
     try {
-      const res = await fetch("http://localhost:8000/api/v1/login", {
+      const res = await fetch(`${backendUrl}/api/v1/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
@@ -208,7 +190,7 @@ export default class AuthHandler implements TAuthHandler {
 
       if (isValid) {
         try {
-          const res = await fetch("http://localhost:8000/api/v1/users/me", {
+          const res = await fetch(`${backendUrl}/api/v1/users/me`, {
             method: "GET",
             headers: {
               "Content-Type": "application/json",
@@ -241,5 +223,47 @@ export default class AuthHandler implements TAuthHandler {
 
     // not logged in
     return { data: { session: null }, error: "user not logged in" };
+  }
+
+  async verify(verification_token: string): Promise<{ error: string | null }> {
+    try {
+      const res = await fetch(`${backendUrl}/api/v1/register/verify`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ verification_token }),
+      });
+
+      if (res.ok) return { error: null };
+
+      const error = await res.json();
+
+      throw new Error(error.detail);
+    } catch (error) {
+      // user response error
+      return { error: (error as Error).message };
+    }
+  }
+
+  async resendVerification(email: string): Promise<{ error: string | null }> {
+    try {
+      const res = await fetch(`${backendUrl}/api/v1/register/verify/resend`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      if (res.ok) return { error: null };
+
+      const error = await res.json();
+
+      throw new Error(error.detail);
+    } catch (error) {
+      // user response error
+      return { error: (error as Error).message };
+    }
   }
 }
